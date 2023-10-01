@@ -33,12 +33,21 @@ def split_hash(h: int) -> Tuple[int, int]:
     return (h & Mask.HASH_1.value) >> 7, h & Mask.HASH_2.value
 
 
-def group_index(n: int) -> int:
-    return int(math.floor(n / GROUP_SIZE)) * GROUP_SIZE
-
-
 K = TypeVar('K')
 V = TypeVar('V')
+
+
+def _ensure_multiple_(multiple_of: int, number: int):
+    """
+    :param number: The new capacity.
+    :return: The adjusted number that ensures it is a multiple of multiple_of.
+    """
+    cap_mod_g = number % multiple_of
+
+    if cap_mod_g != 0:
+        number += multiple_of - cap_mod_g
+
+    return number
 
 
 class FlatHashMap:
@@ -49,6 +58,8 @@ class FlatHashMap:
     _limit: int
 
     def __init__(self, capacity=16):
+        capacity = _ensure_multiple_(GROUP_SIZE, capacity)
+
         self._initialize_control_(capacity)
         self._initialize_pairs_(capacity)
         self._resident_keys = 0
@@ -61,19 +72,20 @@ class FlatHashMap:
     def _initialize_pairs_(self, capacity: int):
         self._pairs = [None] * capacity
 
-    def _find_(self, key: K) -> Tuple[bool, Optional[V], int]:
+    def _find_(self, key: K) -> Tuple[bool, Optional[V], int, int]:
         """
         Find the given key.
 
         :param key: The key to search for in the FlatHashMap.
-        :return: A tuple containing three elements
+        :return: A tuple containing four elements
             - a boolean indicating if the key was found,
             - an optional value associated with the key (if found)
-            - the index of the key-value pair.
+            - the index of the key-value pair
+            - the probe index of the match
         """
 
         hi, lo = split_hash(key.__hash__())
-        probe_index = hi % self._pairs.__len__()
+        probe_index = self._key_group_(hi) * GROUP_SIZE
 
         while True:
             keys = self._control_keys_at_index_(probe_index)
@@ -85,7 +97,7 @@ class FlatHashMap:
                 index = (probe_index + match) % self._pairs.__len__()
 
                 if key == self._pairs[index][0]:
-                    return True, self._pairs[index][1], index
+                    return True, self._pairs[index][1], index, probe_index
 
                 matches = bitmask
 
@@ -95,7 +107,7 @@ class FlatHashMap:
                 match, _ = sse_match.next_match(matches)
                 index = (probe_index + match) % self._pairs.__len__()
 
-                return False, None, index
+                return False, None, index, probe_index
 
             probe_index += GROUP_SIZE
 
@@ -103,9 +115,12 @@ class FlatHashMap:
                 probe_index = 0
 
     def __contains__(self, key):
-        found, _, _ = self._find_(key)
+        found, _, _, _ = self._find_(key)
 
         return found
+
+    def _key_group_(self, key: int):
+        return key % int(self._pairs.__len__() / GROUP_SIZE)
 
     def _next_size_(self):
         n = len(self._pairs) * 2
@@ -113,7 +128,7 @@ class FlatHashMap:
         if self._removed_keys >= self._resident_keys:
             n = len(self._pairs)
 
-        return int(n)
+        return _ensure_multiple_(GROUP_SIZE, int(n))
 
     def _rehash_(self, n: int):
         pairs = self._pairs
@@ -132,7 +147,7 @@ class FlatHashMap:
         del control
 
     def __getitem__(self, item: K):
-        _, value, _ = self._find_(item)
+        _, value, _, _ = self._find_(item)
 
         return value
 
@@ -153,7 +168,7 @@ class FlatHashMap:
             self._rehash_(self._next_size_())
 
         hi, lo = split_hash(key.__hash__())
-        found, old_value, index = self._find_(key)
+        found, old_value, index, _ = self._find_(key)
 
         if found:
             self._pairs[index] = (key, value)
@@ -169,12 +184,15 @@ class FlatHashMap:
         :param key: The key to be removed from the FlatHashMap.
         :return: The value associated with the specified key, or None if the key is not found.
         """
-        found, value, index = self._find_(key)
+        if self._removed_keys > len(self._pairs) / 2:
+            self._rehash_(len(self._pairs))
+
+        found, value, index, probe_index = self._find_(key)
 
         if not found:
             return None
 
-        keys = self._control_keys_at_index_(group_index(index))
+        keys = self._control_keys_at_index_(probe_index)
 
         matches = sse_match.find_matches(Mask.EMPTY.value, keys)
 

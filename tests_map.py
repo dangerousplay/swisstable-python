@@ -147,9 +147,8 @@ class FlatMapTests(unittest.TestCase):
 
     def test_delete_all(self):
         for _ in range(100):
-            hash_map = FlatHashMap(capacity=32)
-
-            amount = 32
+            amount = 250
+            hash_map = FlatHashMap(capacity=amount)
             previous_keys = []
 
             for i in generate_random_data(amount):
@@ -162,9 +161,8 @@ class FlatMapTests(unittest.TestCase):
 
     def test_delete_some(self):
         for _ in range(100):
-            hash_map = FlatHashMap(capacity=32)
-
-            amount = 32
+            amount = 250
+            hash_map = FlatHashMap(capacity=amount)
             previous_keys = []
 
             for i in generate_random_data(amount):
