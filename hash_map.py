@@ -213,6 +213,27 @@ class FlatHashMap:
     def __setitem__(self, key: K, value: V):
         self.put(key, value)
 
+    def __iter__(self):
+        return filter(lambda x: x is not None, self._pairs)
+
+    def __add__(self, other):
+        for k, v in other:
+            self.put(k, v)
+
+        return self
+
+    def __sub__(self, other):
+        for k, v in other:
+            self.remove(k)
+
+        return self
+
+    def __str__(self):
+        return f"{list(self.__iter__())}, cap={self._pairs.__len__()}"
+
+    def __repr__(self):
+        return self.__str__()
+
     def _control_keys_at_index_(self, probe_index):
         keys = self._control[probe_index:]
 
