@@ -17,6 +17,10 @@ class Mask(Enum):
 
 
 def num_groups(size: int) -> int:
+    """
+    :param size: An integer representing the total size
+    :return: An integer representing the number of groups
+    """
     groups = int(math.floor(size / MAX_AVG_GROUP_LOAD))
 
     if groups == 0:
@@ -58,6 +62,16 @@ class FlatHashMap:
         self._pairs = [None] * capacity
 
     def _find_(self, key: K) -> Tuple[bool, Optional[V], int]:
+        """
+        Find the given key.
+
+        :param key: The key to search for in the FlatHashMap.
+        :return: A tuple containing three elements
+            - a boolean indicating if the key was found,
+            - an optional value associated with the key (if found)
+            - the index of the key-value pair.
+        """
+
         hi, lo = split_hash(key.__hash__())
         probe_index = hi % self._pairs.__len__()
 
@@ -68,7 +82,7 @@ class FlatHashMap:
 
             while matches != 0:
                 match, bitmask = sse_match.next_match(matches)
-                index = probe_index + match
+                index = (probe_index + match) % self._pairs.__len__()
 
                 if key == self._pairs[index][0]:
                     return True, self._pairs[index][1], index
@@ -79,7 +93,7 @@ class FlatHashMap:
 
             if matches != 0:
                 match, _ = sse_match.next_match(matches)
-                index = probe_index + match
+                index = (probe_index + match) % self._pairs.__len__()
 
                 return False, None, index
 
@@ -123,6 +137,18 @@ class FlatHashMap:
         return value
 
     def put(self, key: K, value: V) -> Optional[V]:
+        """
+        :param key: The key to be inserted into the hash map.
+        :param value: The value corresponding to the key to be inserted into the hash map.
+        :return: The old value if the key already exists in the hash map, otherwise None.
+
+        This method inserts a key-value pair into the FlatHashMap. If the number of resident keys in the FlatHashMap
+        exceeds the limit, the hash map is rehashed to accommodate more keys. The method splits the hash of the key
+        into high and low bytes, searches for the key in the hash map, and updates the value if the key already
+        exists. If the key is not found, the key-value pair is inserted into the hash map along with the control byte
+        and the resident keys count is incremented. Finally, the method returns the old value if the key already
+        exists in the hash map, otherwise it returns None.
+        """
         if self._resident_keys >= self._limit:
             self._rehash_(self._next_size_())
 
@@ -139,6 +165,10 @@ class FlatHashMap:
         return old_value
 
     def remove(self, key: K) -> Optional[V]:
+        """
+        :param key: The key to be removed from the FlatHashMap.
+        :return: The value associated with the specified key, or None if the key is not found.
+        """
         found, value, index = self._find_(key)
 
         if not found:
@@ -169,7 +199,8 @@ class FlatHashMap:
         keys = self._control[probe_index:]
 
         if len(keys) < GROUP_SIZE:
-            keys += [Mask.TOMBSTONE.value] * (GROUP_SIZE - len(keys))
+            amount_missing = GROUP_SIZE - len(keys)
+            keys += self._control[0:amount_missing]
 
         return bytes(keys)
 

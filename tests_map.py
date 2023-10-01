@@ -1,6 +1,8 @@
 import math
 import random
 import unittest
+from typing import Set
+
 import pyximport
 pyximport.install()
 
@@ -26,6 +28,10 @@ class ColisionHash:
 
 def rand_key(i: int):
     return f"{i}-{random.randint(10, 100)}"
+
+
+def generate_random_data(amount: int) -> Set[int]:
+    return set([random.randint(1, 10000000) for _ in range(amount)])
 
 
 class SSETests(unittest.TestCase):
@@ -72,7 +78,7 @@ class FlatMapTests(unittest.TestCase):
         hash_map[key] = value
 
         self.assertEqual(hash_map.__len__(), 1)
-        self.assertTrue(hash_map.__contains__(key))
+        self.assertIn(key, hash_map)
 
     def test_put_new_value(self):
         hash_map = FlatHashMap()
@@ -85,7 +91,7 @@ class FlatMapTests(unittest.TestCase):
         hash_map[key] = new_value
 
         self.assertEqual(hash_map.__len__(), 1)
-        self.assertTrue(hash_map.__contains__(key))
+        self.assertIn(key, hash_map)
 
     def test_put_collision(self):
         hash_map = FlatHashMap()
@@ -102,28 +108,28 @@ class FlatMapTests(unittest.TestCase):
             previous_keys.append(key)
 
             for key in previous_keys:
-                self.assertTrue(hash_map.__contains__(key))
+                self.assertIn(key, hash_map)
 
         self.assertEqual(hash_map.__len__(), amount)
 
     def test_put_rehash(self):
-        hash_map = FlatHashMap()
+        for _ in range(50):
+            hash_map = FlatHashMap()
 
-        amount = 250
-        previous_keys = []
+            amount = 250
+            previous_keys = []
 
-        for i in range(amount):
-            key = rand_key(i)
-            hash_map[key] = i
+            for i, data in enumerate(generate_random_data(amount)):
+                hash_map[data] = data
 
-            self.assertEqual(hash_map.__len__(), i + 1)
+                self.assertEqual(hash_map.__len__(), i + 1)
 
-            previous_keys.append(key)
+                previous_keys.append(data)
 
-            for key in previous_keys:
-                self.assertTrue(hash_map.__contains__(key))
+                for key in previous_keys:
+                    self.assertIn(key, hash_map)
 
-        self.assertEqual(hash_map.__len__(), amount)
+            self.assertEqual(hash_map.__len__(), amount)
 
     def test_delete_collision(self):
         hash_map = FlatHashMap()
@@ -137,41 +143,63 @@ class FlatMapTests(unittest.TestCase):
 
             previous_keys.append((key, key.value))
 
-        self.validate_remove_all(hash_map, previous_keys)
+        self.validate_remove(hash_map, previous_keys)
 
-    def test_delete(self):
-        hash_map = FlatHashMap(capacity=32)
+    def test_delete_all(self):
+        for _ in range(100):
+            hash_map = FlatHashMap(capacity=32)
 
-        amount = 10
-        previous_keys = []
+            amount = 32
+            previous_keys = []
 
-        for i in range(amount):
-            key = rand_key(i)
-            hash_map[key] = i
+            for i in generate_random_data(amount):
+                key = rand_key(i)
+                hash_map[key] = i
 
-            previous_keys.append((key, i))
+                previous_keys.append((key, i))
 
-        self.validate_remove_all(hash_map, previous_keys)
+            self.validate_remove(hash_map, previous_keys)
 
-    def validate_remove_all(self, hash_map, previous_keys):
+    def test_delete_some(self):
+        for _ in range(100):
+            hash_map = FlatHashMap(capacity=32)
+
+            amount = 32
+            previous_keys = []
+
+            for i in generate_random_data(amount):
+                key = rand_key(i)
+                hash_map[key] = i
+
+                previous_keys.append((key, i))
+
+            self.validate_remove(hash_map, previous_keys, retain=10)
+
+    def validate_remove(self, hash_map, previous_keys, retain=0):
         initial_size = hash_map.__len__()
         removed = 1
 
-        while len(previous_keys) > 0:
+        while len(previous_keys) > retain:
             key, value = previous_keys.pop()
 
             actual_value = hash_map.remove(key)
 
             self.assertEqual(actual_value, value)
-            self.assertFalse(hash_map.__contains__(key))
+            self.assertNotIn(key, hash_map)
             self.assertEqual(hash_map.__len__(), initial_size - removed)
 
             for previous_key, _ in previous_keys:
-                self.assertTrue(hash_map.__contains__(previous_key))
+                self.assertIn(previous_key, hash_map)
 
             removed += 1
 
-        self.assertEqual(hash_map.__len__(), 0)
+        for key, value in previous_keys:
+            self.assertIn(key, hash_map)
+
+            actual_value = hash_map[key]
+            self.assertEqual(actual_value, value)
+
+        self.assertEqual(hash_map.__len__(), retain)
 
 
 if __name__ == '__main__':
