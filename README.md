@@ -1,10 +1,10 @@
 # Flat Hash Set & Map in Python
 
 A flat Hash Set and Map implementation from `abseil` `C++` library implemented in `Python` using `Cython` in order to use `SSE2` instructions.
-This implementation was made following the great presentation from **Matt Kulukundis** on **CppCon 2017** [^matt2017] and inspired by the Golang port made [^goswiss].
+This implementation was made following the great presentation from **Matt Kulukundis** on **CppCon 2017** [^hashmatt2017] and inspired by the Golang port made [^goswiss].
 
 
-[^matt2017]: [CppCon 2017: Matt Kulukundis "Designing a Fast, Efficient, Cache-friendly Hash Table, Step by Step"](https://www.youtube.com/watch?v=ncHmEUmJZf4)
+[^hashmatt2017]: [CppCon 2017: Matt Kulukundis "Designing a Fast, Efficient, Cache-friendly Hash Table, Step by Step"](https://www.youtube.com/watch?v=ncHmEUmJZf4)
 
 [^goswiss]: [Golang port of Abseil's SwissTable](https://github.com/dolthub/swiss/tree/main)
 
@@ -120,8 +120,8 @@ class ControlFlag(Enum):
 ### Groups
 
 The table is partitioned into groups of the same size.
-We use `16` for the group size in order to efficiently find keys in a group by using `SSE` instructions.
-We can efficiently find a key in the group by load all the 16 control bytes into a `__m128i` and using **3** `SSE` instructions.
+We use `16` for the group size in order to **efficiently** find keys in the group by using `SSE` instructions.
+We can **efficiently** find a key in the group by load all the `16` control bytes into a `__m128i` and using **3** `SSE` instructions.
 
 ![](./docs/hash_groups.jpg)
 
@@ -148,7 +148,8 @@ These instructions combined return a `64 bit` mask which contains the position o
 
 ![](./docs/sse_together.jpg)
 
-> The images used in this explanation are from the presentation `CppCon 2017: Matt Kulukundis "Designing a Fast, Efficient, Cache-friendly Hash Table, Step by Step"`.
+> The images used in this explanation are from the presentation 
+> `CppCon 2017: Matt Kulukundis "Designing a Fast, Efficient, Cache-friendly Hash Table, Step by Step"` [^hashmatt2017].
 
 
 ### Using SSE instructions from Python
@@ -183,8 +184,8 @@ cdef extern from "emmintrin.h":
 ## Complexity analysis
 
 The expected average and best case for `Search`, `Insert` and `Delete` is `O(1)` when the key can be find in the first probe.
-Because we might need to traverse all the items to search for a given key when the table is full (Which ca be avoided by using a load factor lesser than 1.0)
-the worst case is `O(n)`.
+Because we might need to traverse all the items to search for a given key when the table is full 
+(Which can be avoided by using a load factor lesser than 1.0) the worst case is `O(n)`.
 However, due to the use of `SSE` instructions we can search in `3` instructions a group with 16 keys,
 which makes the worst case `O(n)` still performant.
 
