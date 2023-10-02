@@ -13,7 +13,7 @@ class Mask(Enum):
     HASH_1 = 0xFFFF_FFFF_FFFF_FF80
     HASH_2 = 0x0000_0000_0000_007F
     EMPTY = 0b1000_0000             # -128
-    TOMBSTONE = 0b1111_1110         # -2
+    TOMBSTONE = 0b1111_1110         # 254
 
 
 def num_groups(size: int) -> int:

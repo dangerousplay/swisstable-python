@@ -32,7 +32,7 @@ class FlatHashSet:
     def __len__(self):
         return len(self._map)
 
-    def intersect(self, other):
+    def intersection(self, other):
         hash_set = FlatHashSet()
 
         for k, v in self._map:

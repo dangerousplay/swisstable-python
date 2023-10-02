@@ -81,7 +81,7 @@ class TestFlatHashSet(unittest.TestCase):
         for i in range(amount_second):
             fhs2.add(i)
 
-        fhs3 = fhs1.intersect(fhs2)
+        fhs3 = fhs1.intersection(fhs2)
 
         for i in range(amount_second):
             self.assertIn(i, fhs3)
