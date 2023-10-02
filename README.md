@@ -150,6 +150,27 @@ These instructions combined return a `64 bit` mask which contains the position o
 
 ![](./docs/sse_together.jpg)
 
+We can then use each bit to efficiently find the key in the group by checking if the key in the corresponding position.
+
+```python
+while True:
+    keys = _control_keys_at_index_(group_index)
+
+    matches = sse_match.find_matches(h2, keys)
+
+    while matches != 0:
+        match, bitmask = sse_match.next_match(matches)
+        index = (probe_index + match) % self._pairs.__len__()
+
+        if key == self._pairs[index][0]:
+            return True
+
+        matches = bitmask
+```
+
+![](./docs/hash_set_find.jpg)
+
+
 > The images used in this explanation are from the presentation 
 > `CppCon 2017: Matt Kulukundis "Designing a Fast, Efficient, Cache-friendly Hash Table, Step by Step"` [^hashmatt2017].
 
@@ -164,8 +185,10 @@ The [sse_match.pyx](./sse_match.pyx) file contains the mapped `SSE` instructions
 ```cython
 cdef extern from "emmintrin.h":
     # Two things happen here:
-    # - this definition tells Cython that, at the abstraction level of the Cython language, __m128d "behaves like a double" and __m128i "behaves like a fixed size long array"
-    # - at the C level, the "cdef extern from" (above) makes the generated C code look up the exact definition from the original header
+    # - this definition tells Cython that, at the abstraction level of the Cython language, 
+    #   __m128d "behaves like a double" and __m128i "behaves like a fixed size long array"
+    # - at the C level, the "cdef extern from" (above) makes the generated C code look up 
+    #   the exact definition from the original header
     #
     ctypedef double __m128d
     ctypedef long long int[2] __m128i
