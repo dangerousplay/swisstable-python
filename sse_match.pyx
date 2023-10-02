@@ -52,7 +52,7 @@ cdef int _trailing_zeros(int n):
 # AVX:    immintrin.h
 # AVX512: zmmintrin.h
 #
-cdef extern from "emmintrin.h":  # in this example, we use SSE2
+cdef extern from "emmintrin.h":
     # Two things happen here:
     # - this definition tells Cython that, at the abstraction level of the Cython language, __m128d "behaves like a double" and __m128i "behaves like a long array [2]"
     # - at the C level, the "cdef extern from" (above) makes the generated C code look up the exact definition from the original header
@@ -65,11 +65,6 @@ cdef extern from "emmintrin.h":  # in this example, we use SSE2
     # For example, to pack an (unaligned) double pair, to perform addition and multiplication (on packed pairs),
     # and to unpack the result, one would need the following:
     #
-    __m128d _mm_loadu_pd (double *__P) nogil  # (__P[0], __P[1]) are the original pair of doubles
-    __m128d _mm_add_pd (__m128d __A, __m128d __B) nogil
-    __m128d _mm_mul_pd (__m128d __A, __m128d __B) nogil
-    void _mm_store_pd (double *__P, __m128d __A) nogil  # result written to (__P[0], __P[1])
-
     __m128i _mm_set_epi8(char __q15, char __q14, char __q13, char __q12,
                  char __q11, char __q10, char __q09, char __q08,
                  char __q07, char __q06, char __q05, char __q04,
