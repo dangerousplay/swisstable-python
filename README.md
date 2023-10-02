@@ -88,6 +88,31 @@ The linear probing is used due to the `L1`, `L2`, `L3` caches, the subsequent ke
 
 [^probing]: [Linear Probing | Open Addressing | Hash Tables](https://carmencincotti.com/2022-10-10/linear-probing-open-addressing-hash-tables/)
 
+
+### Groups
+
+The table is partitioned into groups of the same size.
+We use `16` for the group size in order to **efficiently** find keys in the group by using `SSE` instructions.
+We can **efficiently** find a key in the group by loading all the `16` control bytes into a `__m128i` and using **3** `SSE` instructions.
+
+![](./docs/hash_groups.jpg)
+
+
+### Keys Metadata (Control)
+
+For each key a whole byte is stored in a `control` metadata array.
+This metadata is used to find the keys more efficiently by using `SIMD` instructions and to handle removal cases
+when the key can't be deleted or a find might not find another key which is after it.
+The metadata **byte** indicates the state of the key, which can be `empty`, `deleted`, or `full` which contains its first `7 bits` hash.
+
+```python
+class ControlFlag(Enum):
+    FULL    = 0b0hhh_hhhh # hash
+    EMPTY   = 0b1000_0000 # 128
+    DELETED = 0b1111_1110 # 254
+```
+
+
 ### Hash
 
 The hash of the key is divided in two parts, `H1` which contains the `57` most significant bits of the key and `H2` which contains the first `7` bits.
@@ -101,29 +126,6 @@ def split_hash(h: int) -> Tuple[int, int]:
 
 - The `H1` hash is used to find the group in which the key would be inserted.
 - The `H2` hash will be the control byte, which will be used in the SSE instructions to efficiently find the key.
-
-
-### Keys Metadata
-
-For each key a whole byte is stored in a control metadata array.
-This metadata is used to find the keys more efficiently by using `SIMD` instructions and to handle removal cases 
-in `open addressing` when the key can't be deleted or a find might not find a key which is after it.
-The metadata byte indicates the state of the key, which can be `empty`, `deleted`, or `full` which contains its first `7 bits` hash.
-
-```python
-class ControlFlag(Enum):
-    FULL    = 0b0hhh_hhhh # hash
-    EMPTY   = 0b1000_0000 # 128
-    DELETED = 0b1111_1110 # 254
-```
-
-### Groups
-
-The table is partitioned into groups of the same size.
-We use `16` for the group size in order to **efficiently** find keys in the group by using `SSE` instructions.
-We can **efficiently** find a key in the group by load all the `16` control bytes into a `__m128i` and using **3** `SSE` instructions.
-
-![](./docs/hash_groups.jpg)
 
 
 ### SSE
