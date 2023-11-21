@@ -1,6 +1,6 @@
 # Flat Hash Set & Map in Python
 
-A flat Hash Set and Map implementation from `abseil` `C++` library implemented in `Python` using `Cython` in order to use `SSE2` instructions.
+A flat Hash Set and Map implementation from **abseil** `C++` library implemented in `Python` using `Cython` in order to use **SSE2** instructions.
 This implementation was made following the great presentation from **Matt Kulukundis** on **CppCon 2017** [^hashmatt2017] and inspired by the Golang port made [^goswiss].
 
 
@@ -19,9 +19,9 @@ This implementation was made following the great presentation from **Matt Kuluku
     * [Hash Set](#hash-set)
   * [Executing the automated tests](#executing-the-automated-tests)
   * [Implementation](#implementation)
-    * [Hash](#hash)
-    * [Keys Metadata](#keys-metadata)
     * [Groups](#groups)
+    * [Keys Metadata (Control)](#keys-metadata-control)
+    * [Hash](#hash)
     * [SSE](#sse)
     * [Using SSE instructions from Python](#using-sse-instructions-from-python)
   * [Complexity analysis](#complexity-analysis)
@@ -77,8 +77,8 @@ python -m unittest discover -s ./tests -t ./tests
 ## Implementation
 
 The implementation uses `Open Addressing` which is an alternative way to handle hash collisions without using linked lists.
-Each key is placed in the table by searching for an empty slot in a process called `probing`.
-There are different types of `probing` that could be used [^probing]:
+Each key is placed in the table by searching for an empty slot in a process called **probing**.
+There are different types of **probing** that could be used [^probing]:
 
 - Linear probing: Sequentially finds inside the hash table.
 - Quadratic probing: Quadratically finds inside the hash table.
@@ -92,8 +92,8 @@ The linear probing is used due to the `L1`, `L2`, `L3` caches, the subsequent ke
 ### Groups
 
 The table is partitioned into groups of the same size.
-We use `16` for the group size in order to **efficiently** find keys in the group by using `SSE` instructions.
-We can **efficiently** find a key in the group by loading all the `16` control bytes into a `__m128i` and using **3** `SSE` instructions.
+We use **16** for the group size in order to **efficiently** find keys in the group by using **SSE** instructions.
+We can **efficiently** find a key in the group by loading all the **16** control bytes into a `__m128i` and using **3 SSE instructions**.
 
 ![](./docs/hash_groups.jpg)
 
@@ -130,10 +130,10 @@ def split_hash(h: int) -> Tuple[int, int]:
 
 ### SSE
 
-We can **efficiently** search for a hash in a group with `16 keys` by loading all the `16` control bytes into a `__m128i` bit vector.
-By using `SSE` instructions, we can load and search the hash by using **3 instructions**: 
+We can **efficiently** search for a hash in a group with **16 keys** by loading all the **16** control bytes into a `__m128i` bit vector.
+By using **3 SSE instructions**: 
 
-1. Fist the instruction `_mm_set1_epi8` which creates a `__m128i` bit vector with `64 bytes` filled with the given `byte`.
+1. The instruction `_mm_set1_epi8` creates a `__m128i` bit vector with **16 bytes** filled with the given `byte`.
 
 ![](./docs/_mm_set1_epi8.jpg)
 
@@ -141,16 +141,16 @@ By using `SSE` instructions, we can load and search the hash by using **3 instru
 
 ![](./docs/_mm_cmpeq_epi8.jpg)
 
-3. The instruction `_mm_movemask_epi8` returns a `64 bit` vector (8 bytes) with the most significant bit of each byte.
-In this case, it returns 1 when the byte is `0xFF`
+3. The instruction `_mm_movemask_epi8` returns a **64 bit** vector (**8 bytes**) with the most significant bit of each byte.
+In this case, it returns **1** when the byte is `0xFF`
 
 ![](./docs/_mm_movemask_epi8.jpg)
 
-These instructions combined return a `64 bit` mask which contains the position of the keys that matched the given hash.
+These instructions combined return a **64 bit** mask which contains the position of the keys that matched the given hash.
 
 ![](./docs/sse_together.jpg)
 
-We can then use each bit to efficiently find the key in the group by checking if the key in the corresponding position.
+We can then use each bit to efficiently find the key in the group by checking if the key is in the corresponding position.
 
 ```python
 while True:
@@ -177,10 +177,10 @@ while True:
 
 ### Using SSE instructions from Python
 
-In order to use `SSE` instructions the implementation uses `Cython`.
+In order to use **SSE** instructions the implementation uses `Cython`.
 We followed the example [Simple example for embedding SSE2 assembly in Cython projects](https://github.com/Technologicat/cython-sse-example)
-to map the `SSE2` instructions required to implement the hash matcher.
-The [sse_match.pyx](./sse_match.pyx) file contains the mapped `SSE` instructions:
+to map the **SSE2** instructions required to implement the hash matcher.
+The [sse_match.pyx](./sse_match.pyx) file contains the mapped **SSE** instructions:
 
 ```cython
 cdef extern from "emmintrin.h":
@@ -211,7 +211,7 @@ cdef extern from "emmintrin.h":
 The expected average and best case for `Search`, `Insert` and `Delete` is `O(1)` when the key can be find in the first probe.
 Because we might need to traverse all the items to search for a given key when the table is full 
 (Which can be avoided by using a load factor lesser than 1.0) the worst case is `O(n)`.
-However, due to the use of `SSE` instructions we can search in `3` instructions a group with 16 keys,
+However, due to the use of `SSE` instructions we can search in **3 instructions** a group with **16 keys**,
 which makes the worst case `O(n)` still performant.
 
 The expected space complexity is `O(n)` due to the contiguous array allocated for the key pairs and the control bytes array.
@@ -238,4 +238,4 @@ The expected space complexity is `O(n)` due to the contiguous array allocated fo
 
 ### Robin hood hash
 
-According to `Matt Kulukundis` this implementation has a similar performance as the Robin hood hash due to the use of SSE instructions and the control bytes which can better use the processor's cache.
+According to `Matt Kulukundis` this implementation has a similar performance as the Robin hood hash due to the use of **SSE** instructions and the control bytes which can better use the processor's cache.
